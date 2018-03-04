@@ -1,12 +1,14 @@
 
 from general import *
 from dataProcessor import *
-
+from selenium import webdriver
 
 class Spider:
 
+
     project_name = ''
     base_url = ''
+    count = 0
     # the file where we store the link we need to crawl
     queue_file = ''
     # the file we have crawled
@@ -17,9 +19,10 @@ class Spider:
     crawled = set()
 
 
-    def __init__(self, project_name, base_url,target_path):
+    def __init__(self, project_name, base_url,target_path,count):
         Spider.project_name = project_name
         Spider.base_url = base_url
+        Spider.count = count
         Spider.target_path = target_path
         Spider.queue_file = Spider.project_name + '/queue.txt'
         Spider.crawled_file = Spider.project_name + '/crawled.txt'
@@ -42,7 +45,6 @@ class Spider:
             print(' now crawling ' + page_url)
             print('Queue ' + str(len(Spider.queue)) + ' | Crawled  ' + str(len(Spider.crawled)))
             Spider.process_links(page_url)
-
             Spider.update_files()
 
     #assemble url
@@ -54,14 +56,40 @@ class Spider:
                 res[tag] = base_rul + tag
         return res
 
+
+    @staticmethod
+    def assemble_second_layer_urls(base_url,count):
+        driver = webdriver.Chrome()
+        res = dict()
+        first_layer_links = Spider.assemble_first_layer_urls(Spider.base_url)
+
+        for tag, link in first_layer_links.items():
+            print('tage: ' + tag + '    link: ' + link)
+            driver.get(link)
+            second_links = set()
+            depth = count
+            while (depth > 0):
+                elem = driver.find_element_by_css_selector(".active.page_link.next").click()
+                sauce = driver.page_source
+                soup = bs.BeautifulSoup(sauce, 'lxml')
+                for pp in soup.find_all('p', class_='title'):
+                    num = pp.find('a').get('href').split('/')[2]
+                    second_links.add(base_url + num)
+                depth -= 1
+            res[tag] = second_links
+        driver.close()
+        return res
+    '''
     @staticmethod
     def assemble_second_layer_urls(base_url):
         res = dict()
-        first_layer_links = Spider.assemble_first_layer_urls(Spider.base_url)
+        first_layer_links = Spider.find_all_second_layer_link(Spider.base_url)
+
         for tag,link in first_layer_links.items():
             print('111111111')
             print(link)
             sauce = urllib.request.urlopen(link)
+
             soup = bs.BeautifulSoup(sauce, 'lxml')
             second_links = set()
             for pp in soup.find_all('p', class_='title'):
@@ -69,14 +97,14 @@ class Spider:
                 second_links.add(base_url+ num)
             res[tag] = second_links
         return res
-
+'''
     @staticmethod
     def process_links(page_url):
-        second_layer_links = Spider.assemble_second_layer_urls('https://www.ncbi.nlm.nih.gov/pubmed/')
+        second_layer_links = Spider.assemble_second_layer_urls('https://www.ncbi.nlm.nih.gov/pubmed/',Spider.count)
         for tag,links in second_layer_links.items():
             try:
                 for link in links:
-                    print(link)
+                    print("tag: "+ tag +'link: ' +  link)
                     processor = Processor(tag,link)
                     processor.get_data()
                     Spider.add_links_to_queue(link)
@@ -100,7 +128,6 @@ class Spider:
         set_to_file(Spider.queue, Spider.queue_file)
         set_to_file(Spider.crawled, Spider.crawled_file)
 print("11111")
-s = Spider('sjsu','https://www.ncbi.nlm.nih.gov/pubmed/?term=','target.txt')
-s.crawl_page('http://www.sjsu.edu/')
+s = Spider('sjsu','https://www.ncbi.nlm.nih.gov/pubmed/?term=','target.txt',3)
 
 
