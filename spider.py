@@ -53,6 +53,7 @@ class Spider:
         res = dict()
         with open(Spider.target_path) as f:
             for tag in f:
+                tag = tag.replace('\n','')
                 res[tag] = base_rul + tag
         return res
 
@@ -106,7 +107,7 @@ class Spider:
                 for link in links:
                     print("tag: "+ tag +'link: ' +  link)
                     processor = Processor(tag,link)
-                    processor.get_data()
+                    processor.upload_data()
                     Spider.add_links_to_queue(link)
                     Spider.queue.remove(link)
                     Spider.crawled.add(link)
@@ -127,7 +128,7 @@ class Spider:
     def update_files():
         set_to_file(Spider.queue, Spider.queue_file)
         set_to_file(Spider.crawled, Spider.crawled_file)
-print("11111")
-s = Spider('sjsu','https://www.ncbi.nlm.nih.gov/pubmed/?term=','target.txt',3)
+
+s = Spider('sjsu','https://www.ncbi.nlm.nih.gov/pubmed/?term=','target.txt',2)
 
 
